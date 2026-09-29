@@ -26,7 +26,8 @@ brew "redumper"
 ## Redumper Notes
 
 - Built from source with LLVM 18 (`llvm@18`, build-only), matching upstream's toolchain. The binary links against the system libc++.
-- Upstream tags builds as `bNNN`; the formula version is `NNN` (e.g. `b753` → `753`). `redumper --version` still reports `build: b753`.
+- Upstream tags builds as `bNNN`; the formula version is `NNN` (e.g. `b753` → `753`). `redumper --version` reports the upstream build plus any local patch suffix (e.g. `build: b753+d8fix`).
+- Carries a patch for PLEXTOR lead-in reads through USB-ATAPI bridges that pad D8 transfers (JMicron `0x152D:0x2338`), a regression from upstream [#447](https://github.com/superg/redumper/pull/447) in `b751`. The `+d8fix` build suffix marks patched binaries, so it also shows up in dump logs and MPF's Redump submission info. The patch and suffix are removed together once upstream ships a fix.
 - If redumper fails with `failed to create service plugin interface ... resource shortage`, macOS privacy controls blocked IOKit access; run it from a directory outside Desktop, Documents and Downloads (see upstream's [macOS notes](https://github.com/superg/redumper#macos)).
 
 ## Maintenance
