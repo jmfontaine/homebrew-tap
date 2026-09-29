@@ -19,13 +19,20 @@ class Redumper < Formula
   depends_on "ninja" => :build
   depends_on :macos
 
+  # b751 (superg/redumper#447) started rejecting READ CDDA (D8) transfers whose byte
+  # count differs from the sub-code payload. JMicron USB-ATAPI bridges (0x152D:0x2338)
+  # pad transfers into a larger host buffer, so PLEXTOR lead-in reads fail on macOS.
+  # Request exactly the payload size. Drop this patch and the `+d8fix` build suffix
+  # together once upstream ships a fix.
+  patch :DATA
+
   def install
     # The unit tests pull googletest via FetchContent, which Homebrew blocks.
     inreplace "CMakeLists.txt", 'add_subdirectory("tests")', ""
 
     args = %W[
       -DCMAKE_CXX_COMPILER=#{formula_opt_bin("llvm@18")}/clang++
-      -DREDUMPER_VERSION_BUILD=b#{version}
+      -DREDUMPER_VERSION_BUILD=b#{version}+d8fix
       -DCLANG_TIDY=OFF
     ]
     # Recent macOS SDK headers declare CF_ENUM typedefs that clang 18 rejects.
@@ -39,7 +46,7 @@ class Redumper < Formula
   end
 
   test do
-    assert_match "redumper (build: b#{version})", shell_output("#{bin}/redumper --version")
+    assert_match "redumper (build: b#{version}+d8fix)", shell_output("#{bin}/redumper --version")
     assert_match "PLEXTOR", shell_output("#{bin}/redumper --list-recommended-drives")
 
     (testpath/"src").mkpath
@@ -53,3 +60,24 @@ class Redumper < Formula
                  shell_output("#{bin}/redumper info --image-path=#{testpath} --image-name=test")
   end
 end
+
+__END__
+diff --git a/scsi/cmd.ixx b/scsi/cmd.ixx
+index c8c4c4f..50bfd66 100644
+--- a/scsi/cmd.ixx
++++ b/scsi/cmd.ixx
+@@ -287,8 +287,12 @@ export SPTD::Status cmd_read_cdda(SPTD &sptd, uint8_t *sectors, uint32_t block_s
+     *(uint32_t *)cdb.transfer_blocks = endian_swap(transfer_length);
+     cdb.sub_code = (uint8_t)sub_code;
+ 
+-    auto [status, transferred_length] = sptd.sendCommand(&cdb, sizeof(cdb), sectors, block_size * transfer_length);
+-    if(!status.status_code && transferred_length != READ_CDDA_SIZES[(uint8_t)sub_code] * transfer_length)
++    // request exactly the sub-code payload: some USB-ATAPI bridges (JMicron 0x152D:0x2338) append padding when the host buffer is larger
++    uint32_t expected_length = READ_CDDA_SIZES[(uint8_t)sub_code] * transfer_length;
++    uint32_t buffer_length = block_size * transfer_length;
++
++    auto [status, transferred_length] = sptd.sendCommand(&cdb, sizeof(cdb), sectors, buffer_length < expected_length ? buffer_length : expected_length);
++    if(!status.status_code && transferred_length != expected_length)
+         status.status_code = SPTD::HOST_SHORT_TRANSFER;
+ 
+     return status;
