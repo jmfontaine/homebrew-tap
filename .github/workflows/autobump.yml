@@ -20,9 +20,9 @@ defaults:
 jobs:
   autobump:
     runs-on: ubuntu-latest
+    # Writes go through BUMP_GITHUB_TOKEN; PRs opened with GITHUB_TOKEN do not trigger tests.yml.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - name: Set up Homebrew
         id: set-up-homebrew
@@ -34,7 +34,7 @@ jobs:
 
       - name: Bump formulae
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.BUMP_GITHUB_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           TAP_NAME: ${{ steps.set-up-homebrew.outputs.tap-name }}
