@@ -10,6 +10,10 @@ on:
       head_sha:
         description: Expected pull request head commit SHA (optional)
 
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.pull_request }}
+  cancel-in-progress: false
+
 permissions: {}
 
 defaults:
@@ -29,6 +33,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Set up Homebrew
+        id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -37,29 +42,63 @@ jobs:
         id: git_setup
         uses: Homebrew/actions/git-user-config@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
 
+      # Commit bottles on the PR branch and merge the PR (as homebrew-core does), so the PR
+      # shows as merged instead of closed with cherry-picked copies of its commits on main.
+      - name: Check out pull request
+        id: checkout
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_SHA: ${{ inputs.head_sha }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+        run: |
+          gh pr checkout "$PULL_REQUEST"
+          head_sha="$(git rev-parse HEAD)"
+          if [[ -n "$EXPECTED_SHA" && "$head_sha" != "$EXPECTED_SHA"* ]]
+          then
+            echo "::error ::PR #$PULL_REQUEST head is $head_sha, expected $EXPECTED_SHA"
+            exit 1
+          fi
+          {
+            echo "branch=$(git branch --show-current)"
+            echo "head_sha=$head_sha"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Pull bottles
         id: pull_bottles
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
-          HEAD_SHA: ${{ inputs.head_sha }}
+          HEAD_SHA: ${{ steps.checkout.outputs.head_sha }}
           PULL_REQUEST: ${{ inputs.pull_request }}
         run: |
-          if [[ -n "$HEAD_SHA" ]]
-          then
-            brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" --head-sha="$HEAD_SHA" \
-              "$PULL_REQUEST"
-          else
-            brew pr-pull --debug --retain-bottle-dir --tap="$GITHUB_REPOSITORY" "$PULL_REQUEST"
-          fi
+          brew pr-pull --debug --retain-bottle-dir --clean --no-cherry-pick --tap="$GITHUB_REPOSITORY" \
+            --head-sha="$HEAD_SHA" "$PULL_REQUEST"
 
       - name: Generate build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: "${{ steps.pull_bottles.outputs.bottle_path }}/*.tar.gz"
 
-      - name: Push commits
+      - name: Push bottle commit to pull request
         uses: Homebrew/actions/git-try-push@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
         with:
-          branch: main
+          directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+          branch: ${{ steps.checkout.outputs.branch }}
+
+      - name: Merge pull request
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST: ${{ inputs.pull_request }}
+        run: |
+          local_head="$(git rev-parse HEAD)"
+          # GitHub updates the PR head asynchronously after a push.
+          for delay in 1 2 4 8 16
+          do
+            [[ "$(gh pr view "$PULL_REQUEST" --json headRefOid --jq .headRefOid)" == "$local_head" ]] && break
+            sleep "$delay"
+          done
+          gh pr merge "$PULL_REQUEST" --rebase --match-head-commit "$local_head"

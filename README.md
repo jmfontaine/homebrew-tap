@@ -33,5 +33,5 @@ brew "redumper"
 ## Maintenance
 
 - `.github/workflows/autobump.yml` opens a PR daily when a new upstream `bNNN` release appears. It needs a `BUMP_GITHUB_TOKEN` repository secret: a fine-grained token for this repository with Contents and Pull requests read/write (`GITHUB_TOKEN` cannot open PRs that trigger `tests.yml`).
-- `.github/workflows/tests.yml` runs `brew test-bot` on PRs; `publish.yml` publishes bottles via `brew pr-pull`.
+- `.github/workflows/tests.yml` runs `brew test-bot` on PRs. To publish a PR with green tests, do not click Merge: run `gh workflow run publish.yml -f pull_request=<N> -f head_sha=<sha>`. `brew pr-pull` uploads the bottles to a GitHub release, commits the `bottle do` block to the PR branch, and rebase-merges the PR.
 - Local check: `brew install --build-from-source jmfontaine/tap/redumper && brew test redumper && brew audit --strict --online jmfontaine/tap/redumper`.
