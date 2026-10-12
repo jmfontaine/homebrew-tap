@@ -88,10 +88,12 @@ jobs:
           directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
           branch: ${{ steps.checkout.outputs.branch }}
 
+      # Merge as the repository admin: the bottle commit pushed with GITHUB_TOKEN never gets the
+      # required `tests` check, and only the admin role can bypass the ruleset that requires it.
       - name: Merge pull request
         working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BUMP_GITHUB_TOKEN }}
           PULL_REQUEST: ${{ inputs.pull_request }}
         run: |
           local_head="$(git rev-parse HEAD)"
