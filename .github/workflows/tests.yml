@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - Formula/**
+      - .github/workflows/**
   pull_request:
 
 permissions: {}
@@ -14,7 +17,38 @@ defaults:
     shell: bash -xeuo pipefail {0}
 
 jobs:
+  # Pull requests always run this workflow so the required `tests` check reports; test-bot
+  # only runs when they touch formulae or workflows.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      test-bot: ${{ steps.filter.outputs.test-bot }}
+    steps:
+      - name: Check for formula or workflow changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != pull_request ]]
+          then
+            echo "test-bot=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Include the old path of renamed files so moving a formula out of Formula/ still runs test-bot.
+          files="$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST/files" --jq '.[] | .filename, (.previous_filename // empty)')"
+          if grep -qE '^(Formula/|\.github/workflows/)' <<< "$files"
+          then
+            echo "test-bot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "test-bot=false" >> "$GITHUB_OUTPUT"
+          fi
+
   test-bot:
+    needs: changes
+    if: needs.changes.outputs.test-bot == 'true'
     strategy:
       matrix:
         os: [ macos-26 ]
@@ -52,3 +86,19 @@ jobs:
         with:
           name: bottles_${{ matrix.os }}
           path: '*.bottle.*'
+
+  # The required status check. A skipped matrix job reports under its unexpanded name, so
+  # requiring `test-bot (macos-26)` would leave PRs that skip it waiting forever.
+  tests:
+    needs: [ changes, test-bot ]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check job results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          TEST_BOT_RESULT: ${{ needs.test-bot.result }}
+        run: |
+          [[ "$CHANGES_RESULT" == success ]]
+          [[ "$TEST_BOT_RESULT" == success || "$TEST_BOT_RESULT" == skipped ]]
