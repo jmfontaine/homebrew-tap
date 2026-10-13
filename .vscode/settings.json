@@ -1,12 +1,17 @@
 {
   "cSpell.words": [
+    "anyio",
     "autobump",
     "BREWTEST",
     "cdda",
     "CDDA",
     "DCLANG",
     "DCMAKE",
+    "discogs",
+    "Discogs",
     "DREDUMPER",
+    "httpcore",
+    "idna",
     "inreplace",
     "jmfontaine",
     "libc",
@@ -15,6 +20,7 @@
     "mkpath",
     "pipefail",
     "PLEXTOR",
+    "pydantic",
     "Redump",
     "redumper",
     "Redumper",
@@ -23,6 +29,10 @@
     "SPTD",
     "superg",
     "testpath",
+    "truststore",
+    "tzdata",
+    "virtualenv",
+    "Virtualenv",
     "xeuo"
   ]
 }

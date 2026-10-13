@@ -6,22 +6,31 @@ Personal Homebrew tap.
 
 | Formula | Description |
 | --- | --- |
+| [`agent-discogs`](Formula/agent-discogs.rb) | [agent-discogs](https://github.com/jmfontaine/agent-discogs), token-efficient Discogs CLI for AI agents |
 | [`redumper`](Formula/redumper.rb) | [redumper](https://github.com/superg/redumper), low-level optical disc dumper (macOS only) |
 
 ## Install
 
 ```sh
+brew install jmfontaine/tap/agent-discogs
 brew install jmfontaine/tap/redumper
 ```
 
-Or `brew tap jmfontaine/tap` and then `brew install redumper`.
+Or `brew tap jmfontaine/tap` and then `brew install <formula>`.
 
 Or, in a `Brewfile`:
 
 ```ruby
 tap "jmfontaine/tap"
+brew "agent-discogs"
 brew "redumper"
 ```
+
+## agent-discogs Notes
+
+- Installs the PyPI release into a virtualenv on `python@3.15`, the Python `homebrew/core` uses, with every Python dependency pinned as a `resource` block. Nothing bumps `depends_on "python@3.15"` automatically: update it when `homebrew/core` moves to a newer Python.
+- Building from source needs Rust (`rust`, build-only) for `pydantic-core`. Bottles do not.
+- The daily autobump opens a PR for the newest PyPI release once it is past Homebrew's one-day release cooldown (none while a bump PR is still open), and regenerates the `resource` blocks in the same PR.
 
 ## Redumper Notes
 
@@ -32,6 +41,6 @@ brew "redumper"
 
 ## Maintenance
 
-- `.github/workflows/autobump.yml` opens a PR daily when a new upstream `bNNN` release appears. It needs a `BUMP_GITHUB_TOKEN` repository secret: a fine-grained token for this repository with Contents and Pull requests read/write (`GITHUB_TOKEN` cannot open PRs that trigger `tests.yml`). `publish.yml` also merges with it, because only the repository admin can bypass the `main` ruleset.
+- `.github/workflows/autobump.yml` opens a PR daily when a new upstream release appears (a redumper `bNNN` tag, an agent-discogs PyPI release). It needs a `BUMP_GITHUB_TOKEN` repository secret: a fine-grained token for this repository with Contents and Pull requests read/write (`GITHUB_TOKEN` cannot open PRs that trigger `tests.yml`). `publish.yml` also merges with it, because only the repository admin can bypass the `main` ruleset.
 - `.github/workflows/tests.yml` reports the `tests` check on every PR, which the `main` ruleset requires. It runs `brew test-bot` only when a PR touches `Formula/` or `.github/workflows/`; other PRs merge normally once `tests` passes. To publish a formula PR with green tests, do not click Merge: run `gh workflow run publish.yml -f pull_request=<N> -f head_sha=<sha>`. `brew pr-pull` uploads the bottles to a GitHub release, commits the `bottle do` block to the PR branch, and squash-merges the PR.
-- Local check: `brew install --build-from-source jmfontaine/tap/redumper && brew test redumper && brew audit --strict --online jmfontaine/tap/redumper`.
+- Local check, per formula: `brew install --build-from-source jmfontaine/tap/<formula> && brew test <formula> && brew audit --strict --online jmfontaine/tap/<formula>`.
