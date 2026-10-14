@@ -25,6 +25,7 @@ jobs:
       pull-requests: read
     outputs:
       test-bot: ${{ steps.filter.outputs.test-bot }}
+      formulae: ${{ steps.filter.outputs.formulae }}
     steps:
       - name: Check for formula or workflow changes
         id: filter
@@ -37,14 +38,17 @@ jobs:
             echo "test-bot=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          files="$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST/files" --jq '.[] | [.status, .filename, .previous_filename // ""] | @tsv')"
           # Include the old path of renamed files so moving a formula out of Formula/ still runs test-bot.
-          files="$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST/files" --jq '.[] | .filename, (.previous_filename // empty)')"
-          if grep -qE '^(Formula/|\.github/workflows/)' <<< "$files"
+          paths="$(cut -f2,3 <<< "$files" | tr '\t' '\n')"
+          if grep -qE '^(Formula/|\.github/workflows/)' <<< "$paths"
           then
             echo "test-bot=true" >> "$GITHUB_OUTPUT"
           else
             echo "test-bot=false" >> "$GITHUB_OUTPUT"
           fi
+          formulae="$(awk -F '\t' '$1 != "removed" && $2 ~ /^Formula\/[^\/]+\.rb$/ { sub(/^Formula\//, "", $2); sub(/\.rb$/, "", $2); print $2 }' <<< "$files" | xargs)"
+          echo "formulae=$formulae" >> "$GITHUB_OUTPUT"
 
   test-bot:
     needs: changes
@@ -87,10 +91,51 @@ jobs:
           name: bottles_${{ matrix.os }}
           path: '*.bottle.*'
 
+  # Fails while a changed formula's bottle block does not point at bottles for its current
+  # version, which is the case for every formula PR until publish.yml commits the new bottle
+  # block. Clicking Merge instead would ship a formula whose bottle URL returns 404.
+  bottles:
+    needs: changes
+    if: needs.changes.outputs.formulae != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check bottle blocks match formula versions
+        env:
+          FORMULAE: ${{ needs.changes.outputs.formulae }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: |
+          # Fully qualified so brew resolves each formula from this tap.
+          tap="${GITHUB_REPOSITORY/\/homebrew-//}"
+          status=0
+          for formula in $FORMULAE
+          do
+            # test-bot publishes bottles to the `<name>-<pkg_version>` release of this repository.
+            info="$(
+              brew info --json=v2 "$tap/$formula" |
+                jq -r '.formulae[0] | [.versions.stable + (if .revision > 0 then "_\(.revision)" else "" end), .bottle.stable.root_url // "none"] | @tsv'
+            )"
+            IFS=$'\t' read -r pkg_version root_url <<< "$info"
+            expected="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$formula-$pkg_version"
+            if [[ "$root_url" != "$expected" ]]
+            then
+              echo "::error file=Formula/$formula.rb::$formula $pkg_version bottle root_url is $root_url, expected $expected. Do not click Merge: publish with \`gh workflow run publish.yml -f pull_request=$PULL_REQUEST -f head_sha=$HEAD_SHA\`."
+              status=1
+            fi
+          done
+          exit "$status"
+
   # The required status check. A skipped matrix job reports under its unexpanded name, so
   # requiring `test-bot (macos-26)` would leave PRs that skip it waiting forever.
   tests:
-    needs: [ changes, test-bot ]
+    needs: [ changes, test-bot, bottles ]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -99,6 +144,8 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           TEST_BOT_RESULT: ${{ needs.test-bot.result }}
+          BOTTLES_RESULT: ${{ needs.bottles.result }}
         run: |
           [[ "$CHANGES_RESULT" == success ]]
           [[ "$TEST_BOT_RESULT" == success || "$TEST_BOT_RESULT" == skipped ]]
+          [[ "$BOTTLES_RESULT" == success || "$BOTTLES_RESULT" == skipped ]]
