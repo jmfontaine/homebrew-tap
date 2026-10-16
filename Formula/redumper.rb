@@ -12,6 +12,12 @@ class Redumper < Formula
     strategy :github_latest
   end
 
+  bottle do
+    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/redumper-761"
+    rebuild 2
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "5f0c096d336b988828d50199c2ce372e26c480fd488365bd7ac3bc00113edb85"
+  end
+
   # Upstream builds with LLVM 18: C++20 modules need clang-scan-deps, which Xcode
   # does not ship, and newer libc++ releases drop transitive includes it relies on.
   depends_on "cmake" => :build
