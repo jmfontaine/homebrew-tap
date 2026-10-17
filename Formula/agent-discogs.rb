@@ -3,13 +3,13 @@ class AgentDiscogs < Formula
 
   desc "Token-efficient Discogs CLI for AI agents"
   homepage "https://github.com/jmfontaine/agent-discogs"
-  url "https://files.pythonhosted.org/packages/cb/cc/b4bd06f47757fd330f09c22eb8651c86a06526fa83ec80a2adec22ea7372/agent_discogs-0.2.0.tar.gz"
-  sha256 "5f85bbcd765dee4b8c36c67a6641779cbebacdd28a0c8cee760d15d13ff6f594"
+  url "https://files.pythonhosted.org/packages/4f/1d/f4a5829cbee872c8b7859a9728e7a401cc0bcea2493fab3239c670088b33/agent_discogs-0.3.0.tar.gz"
+  sha256 "0a0a723c69412904f1fa54b30b43b1172f0ebe943946a539ee8a54d2ce98e403"
   license "Apache-2.0"
 
   bottle do
-    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/agent-discogs-0.2.0"
-    sha256 cellar: :any, arm64_tahoe: "7820b37dec00662fc821d8ae2e45aa225918d7036a3fd55fa1920a25b5dba413"
+    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/agent-discogs-0.3.0"
+    sha256 cellar: :any, arm64_tahoe: "221eb42376156011f9c70dc67812677285cae407c15f78b99218193aecb602f3"
   end
 
   depends_on "rust" => :build # for pydantic-core
@@ -31,8 +31,8 @@ class AgentDiscogs < Formula
   end
 
   resource "discogs-sdk" do
-    url "https://files.pythonhosted.org/packages/26/08/e7196bb065aadf011917dc9abbd19b01dcdc72e2074d4c8d711189495f86/discogs_sdk-0.7.0.tar.gz"
-    sha256 "f198c899afb30292b55dbae7c780d3aed24b6f34d0a80ae72da4a4910382a993"
+    url "https://files.pythonhosted.org/packages/b5/e4/77f11b67da5b5a2d45b577e15f87efe6d620d866d5e33ebe04f48b87add9/discogs_sdk-0.8.1.tar.gz"
+    sha256 "c97f8fbdd844668ee7975f8268cb21ac6095d203cb88c31e04798644d70a207c"
   end
 
   resource "h11" do
@@ -66,8 +66,8 @@ class AgentDiscogs < Formula
   end
 
   resource "truststore" do
-    url "https://files.pythonhosted.org/packages/53/a3/1585216310e344e8102c22482f6060c7a6ea0322b63e026372e6dcefcfd6/truststore-0.10.4.tar.gz"
-    sha256 "9d91bd436463ad5e4ee4aba766628dd6cd7010cf3e2461756b3303710eebc301"
+    url "https://files.pythonhosted.org/packages/ee/9f/c5201d42a484c061e528825fc8e2d565f5abd50a4ced6fb7d29c4ec99b2b/truststore-0.10.5.tar.gz"
+    sha256 "30d36967ccaded5cbb38d602c433f53600036c79d502f4533a49b60a03bbefcd"
   end
 
   resource "typing-extensions" do
