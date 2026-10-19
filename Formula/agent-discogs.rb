@@ -3,8 +3,8 @@ class AgentDiscogs < Formula
 
   desc "Token-efficient Discogs CLI for AI agents"
   homepage "https://github.com/jmfontaine/agent-discogs"
-  url "https://files.pythonhosted.org/packages/4f/1d/f4a5829cbee872c8b7859a9728e7a401cc0bcea2493fab3239c670088b33/agent_discogs-0.3.0.tar.gz"
-  sha256 "0a0a723c69412904f1fa54b30b43b1172f0ebe943946a539ee8a54d2ce98e403"
+  url "https://files.pythonhosted.org/packages/49/91/facfe84a91da53cae95f0aaa54679687f4d2d95d732bfcae0865870a94a8/agent_discogs-0.4.0.tar.gz"
+  sha256 "a79c688f2a863a9651a25ca91c6a77d67d5b94b5a52d18e98fc456459d855d36"
   license "Apache-2.0"
 
   bottle do
