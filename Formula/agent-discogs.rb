@@ -3,13 +3,13 @@ class AgentDiscogs < Formula
 
   desc "Token-efficient Discogs CLI for AI agents"
   homepage "https://github.com/jmfontaine/agent-discogs"
-  url "https://files.pythonhosted.org/packages/4f/1d/f4a5829cbee872c8b7859a9728e7a401cc0bcea2493fab3239c670088b33/agent_discogs-0.3.0.tar.gz"
-  sha256 "0a0a723c69412904f1fa54b30b43b1172f0ebe943946a539ee8a54d2ce98e403"
+  url "https://files.pythonhosted.org/packages/49/91/facfe84a91da53cae95f0aaa54679687f4d2d95d732bfcae0865870a94a8/agent_discogs-0.4.0.tar.gz"
+  sha256 "a79c688f2a863a9651a25ca91c6a77d67d5b94b5a52d18e98fc456459d855d36"
   license "Apache-2.0"
 
   bottle do
-    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/agent-discogs-0.3.0"
-    sha256 cellar: :any, arm64_tahoe: "221eb42376156011f9c70dc67812677285cae407c15f78b99218193aecb602f3"
+    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/agent-discogs-0.4.0"
+    sha256 cellar: :any, arm64_tahoe: "6eea45f29c8c30a1a2b9d6f8f752b1514583dd302adecc7ab0f8b57943aa029f"
   end
 
   depends_on "rust" => :build # for pydantic-core
