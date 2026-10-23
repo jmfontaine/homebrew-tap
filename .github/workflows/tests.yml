@@ -93,7 +93,8 @@ jobs:
 
   # Fails while a changed formula's bottle block does not point at bottles for its current
   # version, which is the case for every formula PR until publish.yml commits the new bottle
-  # block. Clicking Merge instead would ship a formula whose bottle URL returns 404.
+  # block: on its own for autobump PRs, by hand for others. Clicking Merge instead would ship a
+  # formula whose bottle URL returns 404.
   bottles:
     needs: changes
     if: needs.changes.outputs.formulae != ''
@@ -126,7 +127,7 @@ jobs:
             expected="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$formula-$pkg_version"
             if [[ "$root_url" != "$expected" ]]
             then
-              echo "::error file=Formula/$formula.rb::$formula $pkg_version bottle root_url is $root_url, expected $expected. Do not click Merge: publish with \`gh workflow run publish.yml -f pull_request=$PULL_REQUEST -f head_sha=$HEAD_SHA\`."
+              echo "::error file=Formula/$formula.rb::$formula $pkg_version bottle root_url is $root_url, expected $expected. Do not click Merge. Autobump PRs publish on their own once test-bot passes; publish other PRs with \`gh workflow run publish.yml -f pull_request=$PULL_REQUEST -f head_sha=$HEAD_SHA\`."
               status=1
             fi
           done

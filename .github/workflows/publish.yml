@@ -9,10 +9,11 @@ on:
         required: true
       head_sha:
         description: Expected pull request head commit SHA (optional)
-
-concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pull_request }}
-  cancel-in-progress: false
+  # Publishes autobump pull requests once their test-bot build passes. Other formula pull
+  # requests are published by hand with workflow_dispatch.
+  workflow_run:
+    workflows: [ brew test-bot ]
+    types: [ completed ]
 
 permissions: {}
 
@@ -21,7 +22,78 @@ defaults:
     shell: bash -xeuo pipefail {0}
 
 jobs:
+  # Picks the pull request to publish: the dispatch inputs, or the autobump pull request whose
+  # test-bot run just completed.
+  select:
+    # workflow_run fires after every test-bot run, including those for pushes to main that
+    # publishing itself causes: only autobump branches of this repository go further.
+    if: >-
+      github.event_name == 'workflow_dispatch' || (
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        startsWith(github.event.workflow_run.head_branch, 'bump-')
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: read
+    outputs:
+      pull_request: ${{ steps.select.outputs.pull_request }}
+      head_sha: ${{ steps.select.outputs.head_sha }}
+    steps:
+      - name: Select pull request
+        id: select
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          INPUT_PULL_REQUEST: ${{ inputs.pull_request }}
+          INPUT_HEAD_SHA: ${{ inputs.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]
+          then
+            {
+              echo "pull_request=$INPUT_PULL_REQUEST"
+              echo "head_sha=$INPUT_HEAD_SHA"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # The run as a whole always fails before publishing, because the `bottles` job does,
+          # so check the build jobs alone.
+          test_bot="$(
+            gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs" --jq '
+              [.jobs[] | select(.name | startswith("test-bot")) | .conclusion] |
+              if length > 0 and all(. == "success") then "success" else "failure" end
+            '
+          )"
+          if [[ "$test_bot" != success ]]
+          then
+            echo "::notice ::test-bot did not pass for $HEAD_BRANCH, not publishing."
+            exit 0
+          fi
+          # A newer push to the branch gets its own test-bot run and publishes from there.
+          pull_request="$(
+            gh pr list --head "$HEAD_BRANCH" --state open --json number,headRefOid \
+              --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | .number"
+          )"
+          if [[ -z "$pull_request" ]]
+          then
+            echo "::notice ::No open pull request for $HEAD_BRANCH at $HEAD_SHA, not publishing."
+            exit 0
+          fi
+          {
+            echo "pull_request=$pull_request"
+            echo "head_sha=$HEAD_SHA"
+          } >> "$GITHUB_OUTPUT"
+
   pr-pull:
+    needs: select
+    if: needs.select.outputs.pull_request != ''
+    concurrency:
+      group: ${{ github.workflow }}-${{ needs.select.outputs.pull_request }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -49,8 +121,8 @@ jobs:
         working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXPECTED_SHA: ${{ inputs.head_sha }}
-          PULL_REQUEST: ${{ inputs.pull_request }}
+          EXPECTED_SHA: ${{ needs.select.outputs.head_sha }}
+          PULL_REQUEST: ${{ needs.select.outputs.pull_request }}
         run: |
           gh pr checkout "$PULL_REQUEST"
           head_sha="$(git rev-parse HEAD)"
@@ -72,7 +144,7 @@ jobs:
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           HEAD_SHA: ${{ steps.checkout.outputs.head_sha }}
-          PULL_REQUEST: ${{ inputs.pull_request }}
+          PULL_REQUEST: ${{ needs.select.outputs.pull_request }}
         run: |
           brew pr-pull --debug --retain-bottle-dir --clean --no-cherry-pick --tap="$GITHUB_REPOSITORY" \
             --head-sha="$HEAD_SHA" "$PULL_REQUEST"
@@ -88,13 +160,13 @@ jobs:
           directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
           branch: ${{ steps.checkout.outputs.branch }}
 
-      # Merge as the repository admin: the bottle commit pushed with GITHUB_TOKEN never gets the
-      # required `tests` check, and only the admin role can bypass the ruleset that requires it.
+      # Merge as the repository admin with --admin: the bottle commit pushed with GITHUB_TOKEN
+      # never gets the required `tests` check, so only an admin bypass of the ruleset merges it.
       - name: Merge pull request
         working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
         env:
           GH_TOKEN: ${{ secrets.BUMP_GITHUB_TOKEN }}
-          PULL_REQUEST: ${{ inputs.pull_request }}
+          PULL_REQUEST: ${{ needs.select.outputs.pull_request }}
         run: |
           local_head="$(git rev-parse HEAD)"
           # GitHub updates the PR head asynchronously after a push.
@@ -103,4 +175,4 @@ jobs:
             [[ "$(gh pr view "$PULL_REQUEST" --json headRefOid --jq .headRefOid)" == "$local_head" ]] && break
             sleep "$delay"
           done
-          gh pr merge "$PULL_REQUEST" --squash --match-head-commit "$local_head"
+          gh pr merge "$PULL_REQUEST" --squash --admin --match-head-commit "$local_head"
