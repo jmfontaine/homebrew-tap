@@ -8,8 +8,8 @@ class AgentDiscogs < Formula
   license "Apache-2.0"
 
   bottle do
-    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/agent-discogs-0.4.0"
-    sha256 cellar: :any, arm64_tahoe: "6eea45f29c8c30a1a2b9d6f8f752b1514583dd302adecc7ab0f8b57943aa029f"
+    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/agent-discogs-0.5.0"
+    sha256 cellar: :any, arm64_tahoe: "c82de6f49ff97b48a68a54264d675b44d6aab438ed0c01597486a9db1fe03d08"
   end
 
   depends_on "rust" => :build # for pydantic-core
