@@ -1,8 +1,8 @@
 class Redumper < Formula
   desc "Low-level optical disc dumper for CD, DVD, HD DVD and Blu-ray"
   homepage "https://github.com/superg/redumper"
-  url "https://github.com/superg/redumper/archive/refs/tags/b770.tar.gz"
-  sha256 "09aa50d1ca57269e1d94702b80610ffb5086ec32abd14aef51954f5412a1c7c6"
+  url "https://github.com/superg/redumper/archive/refs/tags/b771.tar.gz"
+  sha256 "b69022740e7f8a955f11ed5a70ee8b3250c1efd731a6d1094d44279cc6cbe552"
   license "GPL-3.0-only"
 
   # Upstream tags every CI build as `bNNN`; Homebrew parses the version as `NNN`.
