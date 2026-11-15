@@ -7,7 +7,8 @@ Guidance for coding agents working in this repository.
 `jmfontaine/tap`, a personal Homebrew tap. `Formula/` holds two formulae: `redumper`
 (built from source; upstream tags builds as `bNNN`, the formula version is `NNN`) and
 `agent-discogs` (the PyPI release in a virtualenv, every Python dependency a `resource`
-block). The tap is for macOS: CI runs on `macos-26` only.
+block). Formulae are built and tested on `macos-26` only (`test-bot`); the other jobs
+run on `ubuntu-latest`.
 
 [README.md](README.md) is the manual. Its Maintenance section documents the workflows,
 the secrets they need and the local check for a formula; read it before changing a
@@ -23,8 +24,8 @@ Formula/                          # One .rb file per formula
 .github/dependabot.yml            # Pins GitHub Actions by SHA
 ```
 
-There is no build or test command to run locally. The local check for a formula is in
-the README.
+There is no repository-wide build or test command. The local check for a formula, a
+source build, `brew test` and `brew audit`, is in the README.
 
 ## Gotchas
 
@@ -46,7 +47,6 @@ the README.
   and `.../jobs --jq .total_count` (`gh run list --json` has no triggering actor field).
 - Dependabot's action-pin PRs are not formula PRs: `publish.yml` skips them, and they
   merge like any other PR once `tests` passes.
-- `actionlint` is not installed locally.
 
 ## Shared workflow
 
@@ -62,9 +62,10 @@ issues, branches, pull requests and reviews. It is a pull-request repository.
   squash-merges the PR, so the PR shows as merged. Autobump PRs (`bump-*` branches)
   publish on their own once their `test-bot (macos-26)` job passes. Publish any other
   formula PR by hand with
-  `gh workflow run publish.yml -f pull_request=<N> -f head_sha=<sha>`. The `bottles`
-  job fails the `tests` check until the bottle commit is in, so a formula PR cannot be
-  merged by mistake.
+  `gh workflow run publish.yml -f pull_request=<N> -f head_sha=<sha>`. Until then the
+  `bottles` job fails the `tests` check on a PR whose formula has a new version or
+  revision, because its `bottle do` block still names the old release. A formula edit
+  that keeps the version and revision does not need publishing.
 - **`publish.yml` merges with `--admin`.** The bottle commit is pushed with
   `GITHUB_TOKEN`, so it never gets the required `tests` check, and only an admin bypass
   of the ruleset can merge it. Only that workflow uses `--admin`; agents never pass it.
