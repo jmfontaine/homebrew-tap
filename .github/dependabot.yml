@@ -4,6 +4,9 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    commit-message:
+      prefix: build
+    labels: [dependencies, build]
     groups:
       github-actions:
         patterns:
