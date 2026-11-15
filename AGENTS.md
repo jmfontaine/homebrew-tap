@@ -65,7 +65,8 @@ issues, branches, pull requests and reviews. It is a pull-request repository.
   `gh workflow run publish.yml -f pull_request=<N> -f head_sha=<sha>`. Until then the
   `bottles` job fails the `tests` check on a PR whose formula has a new version or
   revision, because its `bottle do` block still names the old release. A formula edit
-  that keeps the version and revision does not need publishing.
+  that keeps the version and revision passes `bottles`, but is still a formula PR:
+  never use the Merge button.
 - **`publish.yml` merges with `--admin`.** The bottle commit is pushed with
   `GITHUB_TOKEN`, so it never gets the required `tests` check, and only an admin bypass
   of the ruleset can merge it. Only that workflow uses `--admin`; agents never pass it.
