@@ -51,7 +51,10 @@ source build, `brew test` and `brew audit`, is in the README.
 ## Shared workflow
 
 This repository follows the shared workflow: the `github-workflow` skill describes
-issues, branches, pull requests and reviews. It is a pull-request repository.
+issues, branches, pull requests and reviews, and its repository setup describes the
+GitHub settings, rulesets, labels and templates. It is a pull-request repository. Its
+GitHub settings are managed as code outside this repository; change them there, never
+with `gh api` or the GitHub web UI.
 
 ### Deviations from the shared workflow
 
@@ -80,3 +83,7 @@ issues, branches, pull requests and reviews. It is a pull-request repository.
   would leave PRs that skip it waiting forever.
 - **Autobump PR titles are `brew bump`'s own** (`redumper 773`, `agent-discogs 0.5.0`),
   not Conventional Commits. Titles of PRs you open follow the `github-workflow` skill.
+- **Only `main` requires signed commits.** `brew bump` pushes the bump commit and
+  `publish.yml` pushes the bottle commit with plain `git push`, and neither can sign
+  them. The squash merge that lands them on `main` is signed by GitHub. Commits you make
+  are still signed.
