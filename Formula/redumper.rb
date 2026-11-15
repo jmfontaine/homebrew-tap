@@ -1,8 +1,8 @@
 class Redumper < Formula
   desc "Low-level optical disc dumper for CD, DVD, HD DVD and Blu-ray"
   homepage "https://github.com/superg/redumper"
-  url "https://github.com/superg/redumper/archive/refs/tags/b772.tar.gz"
-  sha256 "f600c6bdc302e60cf0405d87d5dadb4aa63fb25f5809f99b4d837c57dd208916"
+  url "https://github.com/superg/redumper/archive/refs/tags/b773.tar.gz"
+  sha256 "6f096cbc5fd9fd3f227b1f0536e5ebdf88c1dddada40605ca887f6b69fac2bf1"
   license "GPL-3.0-only"
 
   # Upstream tags every CI build as `bNNN`; Homebrew parses the version as `NNN`.
@@ -13,8 +13,8 @@ class Redumper < Formula
   end
 
   bottle do
-    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/redumper-772"
-    sha256 cellar: :any_skip_relocation, arm64_tahoe: "23f4821325f4cfca5dd410a6f1f581995ccfa14075c1f11a0a47f86dbd73dc7a"
+    root_url "https://github.com/jmfontaine/homebrew-tap/releases/download/redumper-773"
+    sha256 cellar: :any_skip_relocation, arm64_tahoe: "29acb59771cd30e7e61ee1ac5a34156bb302a1400ede4494446f6270471487fe"
   end
 
   # Upstream builds with LLVM 18: C++20 modules need clang-scan-deps, which Xcode
