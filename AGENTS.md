@@ -48,7 +48,7 @@ source build, `brew test` and `brew audit`, is in the README.
 - Dependabot's action-pin PRs are not formula PRs: `publish.yml` skips them, and they
   merge like any other PR once `tests` passes.
 
-## Shared workflow
+## Shared Workflow
 
 This repository follows the shared workflow: the `github-workflow` skill describes
 issues, branches, pull requests and reviews, and its repository setup describes the
@@ -56,7 +56,7 @@ GitHub settings, rulesets, labels and templates. It is a pull-request repository
 GitHub settings are managed as code outside this repository; change them there, never
 with `gh api` or the GitHub web UI.
 
-### Deviations from the shared workflow
+### Deviations From the Shared Workflow
 
 - **Formula and bump PRs are published by `publish.yml`, never merged with GitHub's
   Merge button.** The Merge button lands the formula without its bottle commit, so the
